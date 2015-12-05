@@ -1,7 +1,170 @@
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define FALSE (0)
+#define TRUE (1)
+
+#define cPANELS_MAX (256)
+
+#define cPANELTYPE_COMMON (0)
+#define cPANELTYPE_TARGET (1)
+
+enum {
+  eDIR_UP = 0,
+  eDIR_DOWN,
+  eDIR_LEFT,
+  eDIR_RIGHT,
+};
+
+typedef struct {
+  int width;
+  int height;
+
+  int x;
+  int y;
+
+  int type;
+}PANEL;
+
+typedef struct {
+  int width;
+  int height;
+
+  int end_x;
+  int end_y;
+
+  int panel_count;
+  PANEL panels[cPANELS_MAX];
+}FIELD;
+
+void set_field_data(FIELD* f, int w, int h, int end_x, int end_y) {
+  f->width = w;
+  f->height = h;
+
+  f->end_x = end_x;
+  f->end_y = end_y;
+}
+
+void add_panel_to_field(FIELD* field, int x, int y, int w, int h, int type) {
+  PANEL* p = &field->panels[field->panel_count];
+  p->width = w;
+  p->height = h;
+  p->x = x;
+  p->y = y;
+  p->type = type;
+
+  field->panel_count++;
+}
+
+int chk_panel_move(FIELD* field, int panel_idx, int dir) {
+  if (panel_idx >= field->panel_count) {
+    return FALSE;
+  }
+
+  PANEL* p = &field->panels[panel_idx];
+  switch (dir) {
+    case eDIR_UP:
+    break;
+    case eDIR_DOWN:
+    break;
+    case eDIR_LEFT:
+    break;
+    case eDIR_RIGHT:
+    break;
+
+    default:
+      return FALSE;
+  }
+  PANEL tmp_panel = *p;
+
+  for (int i = 0; i < field->panel_count; i++) {
+
+  }
+  return FALSE;
+}
+
+int dataread_from_file(char* fname, FIELD* field) {
+  char str[256];
+  FILE *fp = fopen(fname, "r");
+  if (fp == NULL) {
+    printf("%s\n", "file not found");
+    return -1;
+  }
+  fgets(str, sizeof(str), fp);
+
+  char* str_work = str;
+  int w = atoi(str_work);
+  str_work = strchr(str_work, ',');
+  if (str_work == NULL) {
+    return -1;
+  }
+  str_work++;
+  int h = atoi(str_work);
+  //printf("str:%s\n", str);
+  printf("w:%d,h:%d\n", w,h);
+
+  fgets(str, sizeof(str), fp);
+  str_work = str;
+  int end_x = atoi(str_work);
+  str_work = strchr(str_work, ',');
+  if (str_work == NULL) {
+    return -1;
+  }
+  str_work++;
+  int end_y = atoi(str_work);
+  printf("end_x:%d,end_y:%d\n", end_x,end_y);
+
+  set_field_data(field, w, h, end_x, end_y);
+  field->panel_count = 0;
+
+  while (fgets(str, sizeof(str), fp) != NULL) {
+    str_work = str;
+    int panel_x = atoi(str_work);
+    str_work = strchr(str_work, ',');
+    if (str_work == NULL) {
+      return -1;
+    }
+    str_work++;
+
+    int panel_y = atoi(str_work);
+    str_work = strchr(str_work, ',');
+    if (str_work == NULL) {
+      return -1;
+    }
+    str_work++;
+
+    int panel_w = atoi(str_work);
+    str_work = strchr(str_work, ',');
+    if (str_work == NULL) {
+      return -1;
+    }
+    str_work++;
+
+    int panel_h = atoi(str_work);
+    str_work = strchr(str_work, ',');
+    if (str_work == NULL) {
+      return -1;
+    }
+    str_work++;
+
+    int type = atoi(str_work);
+
+    printf("x:%d,y:%d,w:%d,h:%d,type:%d\n", panel_x, panel_y, panel_w, panel_h, type);
+    add_panel_to_field(field, panel_x, panel_y, panel_w, panel_h, type);
+  }
+  fclose(fp);
+
+  return 0;
+}
 
 int main(int argc, char** argv) {
-  printf("てすとまろ\n");
+  if (argc < 2) {
+    return 1;
+  }
+
+  FIELD field;
+  dataread_from_file(argv[1], &field);
 
   return 0;
 }
