@@ -15,6 +15,7 @@ enum {
   eDIR_DOWN,
   eDIR_LEFT,
   eDIR_RIGHT,
+  eDIR_MAX
 };
 
 typedef struct {
@@ -205,12 +206,24 @@ int dataread_from_file(char* fname, FIELD* field) {
 
     int type = atoi(str_work);
 
-    printf("x:%d,y:%d,w:%d,h:%d,type:%d\n", panel_x, panel_y, panel_w, panel_h, type);
+    //printf("x:%d,y:%d,w:%d,h:%d,type:%d\n", panel_x, panel_y, panel_w, panel_h, type);
     add_panel_to_field(field, panel_x, panel_y, panel_w, panel_h, type);
   }
   fclose(fp);
 
   return 0;
+}
+
+void chk_panel_move_test(FIELD* field, int panel_idx) {
+  int i = 0;
+
+  char dir_comments[eDIR_MAX][] = {
+    "UP", "DOWN", "LEFT", "RIGHT"
+  };
+
+  for (i = 0; i < eDIR_MAX) {
+    ;
+  }
 }
 
 int main(int argc, char** argv) {
@@ -221,6 +234,7 @@ int main(int argc, char** argv) {
   FIELD field;
   dataread_from_file(argv[1], &field);
 
+  // test "chk_panel_move"
 
   return 0;
 }
