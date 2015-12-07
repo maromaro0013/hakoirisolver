@@ -59,28 +59,15 @@ void add_panel_to_field(FIELD* field, int x, int y, int w, int h, int type) {
 }
 
 int panel_collision(PANEL* p0, PANEL* p1) {
-/*
-  // 仮想の余白を入れる
-  float padd = 0.1;
-  float x0 = p0->x + padd*(float)p0->x;
-  float x1 = p0->x + padd*(float)p0->x + p0->width;
-  float x2 = p1->x + padd*(float)p1->x;
-  float x3 = p1->x + padd*(float)p1->x + p1->width;
+  int x0 = p0->x;
+  int x1 = p0->x + p0->x + p0->width;
+  int x2 = p1->x;
+  int x3 = p1->x + p1->width;
 
-  float y0 = p0->y + padd*(float)p0->y;
-  float y1 = p0->y + padd*(float)p0->y + p0->height;
-  float y2 = p1->y + padd*(float)p1->y;
-  float y3 = p1->y + padd*(float)p1->y + p1->height;
-*/
-  float x0 = p0->x;
-  float x1 = p0->x + p0->x + p0->width;
-  float x2 = p1->x;
-  float x3 = p1->x + p1->width;
-
-  float y0 = p0->y;
-  float y1 = p0->y + p0->height;
-  float y2 = p1->y;
-  float y3 = p1->y + p1->height;
+  int y0 = p0->y;
+  int y1 = p0->y + p0->height;
+  int y2 = p1->y;
+  int y3 = p1->y + p1->height;
 
   if (x0 >= x2 && x0 < x3) {
     if (y0 >= y2 && y0 < y3) {
@@ -104,36 +91,9 @@ int panel_collision(PANEL* p0, PANEL* p1) {
   }
   return FALSE;
 }
-/*
-int panel_collision_x(PANEL* p0, PANEL* p1) {
-  float padd = 0.1f;
-  if ( (p0->x >= (p1->x + padd) && (p0->x + padd) <= p1->x+p1->width) ) {
-    printf("mokyun:%d:%f,%d:%f\n", p0->x+p0->width, (p1->x + padd), p0->x+p0->width, (p1->x+p1->width + padd));
-    return TRUE;
-  }
-  if ( (p0->x+p0->width >= (p1->x + padd) && (p0->x+p0->width + padd) <= p1->x+p1->width) ) {
-    printf("mokyun:%d:%f,%d:%f\n", p0->x+p0->width, (p1->x + padd), p0->x+p0->width, (p1->x+p1->width + padd));
-    return TRUE;
-  }
 
-  return FALSE;
-}
-
-int panel_collision_y(PANEL* p0, PANEL* p1) {
-  float padd = 0.1f;
-  if ( (p0->y >= (p1->y + padd) && (p0->y + padd) <= p1->y+p1->height) ) {
-    return TRUE;
-  }
-  if ( (p0->y+p0->height >= (p1->y + padd) && (p0->y+p0->height + padd) <= p1->y+p1->height) ) {
-    return TRUE;
-  }
-
-  return FALSE;
-}
-*/
 int panel_collision_to_panel(PANEL* p0, PANEL* p1) {
   if (panel_collision(p0, p1)) {
-  //if (panel_collision_x(p0, p1) && panel_collision_y(p0, p1)) {
     return TRUE;
   }
   return FALSE;
@@ -180,14 +140,14 @@ int chk_panel_move(FIELD* field, int panel_idx, int dir) {
       return FALSE;
   }
 
-  printf("tmp_panel - w:%d,h:%d,x:%d,y:%d\n", tmp_panel.width, tmp_panel.height, tmp_panel.x, tmp_panel.y);
+  //printf("tmp_panel - w:%d,h:%d,x:%d,y:%d\n", tmp_panel.width, tmp_panel.height, tmp_panel.x, tmp_panel.y);
   for (int i = 0; i < field->panel_count; i++) {
       if (i == panel_idx) {
         continue;
       }
       PANEL *target = &field->panels[i];
       if (panel_collision_to_panel(&tmp_panel, target)) {
-        printf("collision:%d:%d\n", panel_idx, i);
+        //printf("collision:%d:%d\n", panel_idx, i);
         return FALSE;
       }
   }
@@ -211,8 +171,6 @@ int dataread_from_file(char* fname, FIELD* field) {
   }
   str_work++;
   int h = atoi(str_work);
-  //printf("str:%s\n", str);
-  //printf("w:%d,h:%d\n", w,h);
 
   fgets(str, sizeof(str), fp);
   str_work = str;
@@ -223,7 +181,6 @@ int dataread_from_file(char* fname, FIELD* field) {
   }
   str_work++;
   int end_y = atoi(str_work);
-  //printf("end_x:%d,end_y:%d\n", end_x,end_y);
 
   set_field_data(field, w, h, end_x, end_y);
   field->panel_count = 0;
@@ -260,7 +217,6 @@ int dataread_from_file(char* fname, FIELD* field) {
 
     int type = atoi(str_work);
 
-    //printf("x:%d,y:%d,w:%d,h:%d,type:%d\n", panel_x, panel_y, panel_w, panel_h, type);
     add_panel_to_field(field, panel_x, panel_y, panel_w, panel_h, type);
   }
   fclose(fp);
@@ -295,11 +251,13 @@ int main(int argc, char** argv) {
 
   // test "chk_panel_move"
   //chk_panel_move_test(&field, 9);
+  /*
   int i = 0;
   for (i = 0; i < field.panel_count; i++) {
     chk_panel_move_test(&field, i);
     printf("\n");
   }
+  */
 
   return 0;
 }
