@@ -57,31 +57,86 @@ void add_panel_to_field(FIELD* field, int x, int y, int w, int h, int type) {
   field->panel_count++;
 }
 
+int panel_collision_x(PANEL* p0, PANEL* p1) {
+  if ( (p0->x >= p1->x && p0->x <= p1->x+p1->width) ) {
+    return TRUE;
+  }
+  if ( (p0->x+p0->width >= p1->x && p0->x+p0->width <= p1->x+p1->width) ) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+int panel_collision_y(PANEL* p0, PANEL* p1) {
+  if ( (p0->y >= p1->y && p0->y <= p1->y+p1->height) ) {
+    return TRUE;
+  }
+  if ( (p0->y+p0->height >= p1->y && p0->y+p0->height <= p1->y+p1->height) ) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+int panel_collision_to_panel(PANEL* p0, PANEL* p1) {
+  if (panel_collision_x(p0, p1) && panel_collision_y(p0, p1)) {
+    return TRUE;
+  }
+  return TRUE;
+}
+
 int chk_panel_move(FIELD* field, int panel_idx, int dir) {
   if (panel_idx >= field->panel_count) {
     return FALSE;
   }
 
   PANEL* p = &field->panels[panel_idx];
+  PANEL tmp_panel = *p;
+
   switch (dir) {
     case eDIR_UP:
+      if (tmp_panel.y <= 0) {
+        return FALSE;
+      }
+      tmp_panel.y -= 1;
     break;
+
     case eDIR_DOWN:
+      if (tmp_panel.y + 1 >= field->height) {
+        return FALSE;
+      }
+      tmp_panel.y += 1;
     break;
+
     case eDIR_LEFT:
+      if (tmp_panel.x <= 0) {
+        return FALSE;
+      }
+      tmp_panel.y -= 1;
     break;
+
     case eDIR_RIGHT:
+      if (tmp_panel.x + 1 >= field->width) {
+        return FALSE;
+      }
+      tmp_panel.y += 1;
     break;
 
     default:
       return FALSE;
   }
-  PANEL tmp_panel = *p;
 
   for (int i = 0; i < field->panel_count; i++) {
-
+      if (i == panel_idx) {
+        continue;
+      }
+      PANEL *target = &field->panels[i];
+      if (panel_collision_to_panel(&tmp_panel, target)) {
+        return FALSE;
+      }
   }
-  return FALSE;
+  return TRUE;
 }
 
 int dataread_from_file(char* fname, FIELD* field) {
@@ -102,7 +157,7 @@ int dataread_from_file(char* fname, FIELD* field) {
   str_work++;
   int h = atoi(str_work);
   //printf("str:%s\n", str);
-  printf("w:%d,h:%d\n", w,h);
+  //printf("w:%d,h:%d\n", w,h);
 
   fgets(str, sizeof(str), fp);
   str_work = str;
@@ -165,6 +220,7 @@ int main(int argc, char** argv) {
 
   FIELD field;
   dataread_from_file(argv[1], &field);
+
 
   return 0;
 }
