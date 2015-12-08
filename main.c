@@ -10,6 +10,11 @@
 #define cPANELTYPE_COMMON (0)
 #define cPANELTYPE_TARGET (1)
 
+#define cFIELD_SIZE_MAX (32)
+#define cPANEL_SIZE_MAX (16)
+
+#define cPANEL_HASH_LENGTH (8)
+
 enum {
   eDIR_UP = 0,
   eDIR_DOWN,
@@ -19,36 +24,75 @@ enum {
 };
 
 typedef struct {
-  int width;
-  int height;
+  char width;
+  char height;
+  char x;
+  char y;
 
-  int x;
-  int y;
+  char type;
+  char padd[3];
 
-  int type;
+  char hash[cPANEL_HASH_LENGTH];
 }PANEL;
 
 typedef struct {
-  int width;
-  int height;
+  char width;
+  char height;
 
-  int end_x;
-  int end_y;
+  char end_x;
+  char end_y;
 
   int panel_count;
   PANEL panels[cPANELS_MAX];
+
+  char* field_hash;
 }FIELD;
 
-void set_field_data(FIELD* f, int w, int h, int end_x, int end_y) {
+void set_field_data(FIELD* f, char w, char h, char end_x, char end_y) {
   f->width = w;
   f->height = h;
 
   f->end_x = end_x;
   f->end_y = end_y;
+
+  f->field_hash = NULL;
 }
 
-void add_panel_to_field(FIELD* field, int x, int y, int w, int h, int type) {
+void create_panel_hash(PANEL* p) {
+  p->hash[0] = p->width;
+  p->hash[1] = p->height;
+  p->hash[2] = p->x;
+  p->hash[3] = p->y;
+
+  p->hash[4] = p->type;
+  p->hash[5] = p->padd[0];
+  p->hash[6] = p->padd[1];
+  p->hash[7] = p->padd[2];
+}
+
+void delete_field_hash(FIELD* f) {
+  if (f->field_hash != NULL) {
+    free(f->field_hash);
+  }
+  f->field_hash = NULL;
+}
+
+void create_field_hash(FIELD* f) {
+  int i = 0;
+
+  int hash_length = f->panel_count*cPANEL_HASH_LENGTH;
+  f->field_hash = (char*)malloc(hash_length);
+  for (i = 0; i < f->panel_count; i++) {
+    PANEL* p = &f->panels[i];
+    char* hp = f->field_hash + i*cPANEL_HASH_LENGTH;
+    memcpy((void*)hp, (void*)p->hash, cPANEL_HASH_LENGTH);
+  }
+}
+
+void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type) {
   PANEL* p = &field->panels[field->panel_count];
+  memset(p, 0, sizeof(PANEL));
+
   p->width = w;
   p->height = h;
   p->x = x;
@@ -56,6 +100,8 @@ void add_panel_to_field(FIELD* field, int x, int y, int w, int h, int type) {
   p->type = type;
 
   field->panel_count++;
+
+  create_panel_hash(p);
 }
 
 int panel_collision(PANEL* p0, PANEL* p1) {
@@ -92,12 +138,14 @@ int panel_collision(PANEL* p0, PANEL* p1) {
   return FALSE;
 }
 
+/*
 int panel_collision_to_panel(PANEL* p0, PANEL* p1) {
   if (panel_collision(p0, p1)) {
     return TRUE;
   }
   return FALSE;
 }
+*/
 
 int chk_panel_move(FIELD* field, int panel_idx, int dir) {
   if (panel_idx >= field->panel_count) {
@@ -146,11 +194,69 @@ int chk_panel_move(FIELD* field, int panel_idx, int dir) {
         continue;
       }
       PANEL *target = &field->panels[i];
-      if (panel_collision_to_panel(&tmp_panel, target)) {
+      if (panel_collision(&tmp_panel, target)) {
         //printf("collision:%d:%d\n", panel_idx, i);
         return FALSE;
       }
   }
+  return TRUE;
+}
+
+int move_panel(FIELD* field, int panel_idx, int dir) {
+  if (panel_idx >= field->panel_count) {
+    return FALSE;
+  }
+
+  PANEL* p = &field->panels[panel_idx];
+  switch (dir) {
+    case eDIR_UP:
+      p->y -= 1;
+    break;
+    case eDIR_DOWN:
+      p->y += 1;
+    break;
+    case eDIR_LEFT:
+      p->x -= 1;
+    break;
+    case eDIR_RIGHT:
+      p->x += 1;
+    break;
+
+    default:
+    break;
+  }
+
+  create_panel_hash(p);
+
+  return TRUE;
+}
+
+int data_validate(FIELD* field) {
+  if (field->width <= 0 || field->width > cFIELD_SIZE_MAX) {
+    return FALSE;
+  }
+  if (field->height <= 0 || field->height > cFIELD_SIZE_MAX) {
+    return FALSE;
+  }
+
+  int i = 0;
+  for (i = 0; i < field->panel_count; i++) {
+    PANEL* p = &field->panels[i];
+    if (p->width <= 0 || p->width > cPANEL_SIZE_MAX) {
+      return FALSE;
+    }
+    if (p->height <= 0 || p->height > cPANEL_SIZE_MAX) {
+      return FALSE;
+    }
+
+    if (p->x < 0 || p->x > field->width) {
+      return FALSE;
+    }
+    if (p->y < 0 || p->y > field->height) {
+      return FALSE;
+    }
+  }
+
   return TRUE;
 }
 
@@ -159,7 +265,7 @@ int dataread_from_file(char* fname, FIELD* field) {
   FILE *fp = fopen(fname, "r");
   if (fp == NULL) {
     printf("%s\n", "file not found");
-    return -1;
+    return FALSE;
   }
   fgets(str, sizeof(str), fp);
 
@@ -167,7 +273,7 @@ int dataread_from_file(char* fname, FIELD* field) {
   int w = atoi(str_work);
   str_work = strchr(str_work, ',');
   if (str_work == NULL) {
-    return -1;
+    return FALSE;
   }
   str_work++;
   int h = atoi(str_work);
@@ -177,7 +283,7 @@ int dataread_from_file(char* fname, FIELD* field) {
   int end_x = atoi(str_work);
   str_work = strchr(str_work, ',');
   if (str_work == NULL) {
-    return -1;
+    return FALSE;
   }
   str_work++;
   int end_y = atoi(str_work);
@@ -190,28 +296,28 @@ int dataread_from_file(char* fname, FIELD* field) {
     int panel_x = atoi(str_work);
     str_work = strchr(str_work, ',');
     if (str_work == NULL) {
-      return -1;
+      return FALSE;
     }
     str_work++;
 
     int panel_y = atoi(str_work);
     str_work = strchr(str_work, ',');
     if (str_work == NULL) {
-      return -1;
+      return FALSE;
     }
     str_work++;
 
     int panel_w = atoi(str_work);
     str_work = strchr(str_work, ',');
     if (str_work == NULL) {
-      return -1;
+      return FALSE;
     }
     str_work++;
 
     int panel_h = atoi(str_work);
     str_work = strchr(str_work, ',');
     if (str_work == NULL) {
-      return -1;
+      return FALSE;
     }
     str_work++;
 
@@ -221,7 +327,7 @@ int dataread_from_file(char* fname, FIELD* field) {
   }
   fclose(fp);
 
-  return 0;
+  return TRUE;
 }
 
 void chk_panel_move_test(FIELD* field, int panel_idx) {
@@ -243,21 +349,33 @@ void chk_panel_move_test(FIELD* field, int panel_idx) {
 
 int main(int argc, char** argv) {
   if (argc < 2) {
+    printf("file not found\n");
     return 1;
   }
 
   FIELD field;
   dataread_from_file(argv[1], &field);
 
+  if (data_validate(&field) == FALSE) {
+    printf("data error\n");
+    return 1;
+  }
   // test "chk_panel_move"
   //chk_panel_move_test(&field, 9);
+
   /*
   int i = 0;
   for (i = 0; i < field.panel_count; i++) {
+    PANEL* p = &field.panels[i];
     chk_panel_move_test(&field, i);
+    int j = 0;
+    for (j = 0; j < 8; j++) {
+      printf("%d,", p->hash[j]);
+    }
     printf("\n");
   }
   */
+
 
   return 0;
 }
