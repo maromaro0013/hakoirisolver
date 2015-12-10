@@ -43,6 +43,8 @@ typedef struct {
   char end_y;
 
   int panel_count;
+  int solve_depth;
+
   PANEL panels[cPANELS_MAX];
 
   char* field_hash;
@@ -56,6 +58,16 @@ void set_field_data(FIELD* f, char w, char h, char end_x, char end_y) {
   f->end_y = end_y;
 
   f->field_hash = NULL;
+  f->solve_depth = 0;
+}
+
+void copy_field(FIELD* source, FIELD* dest) {
+  dest->width = source->width;
+  dest->height = source->height;
+  dest->end_x = source->end_x;
+  dest->end_y = source->end_y;
+
+  memcpy((void*)&dest->panels[0], &source->panels[0], sizeof(dest->panels));
 }
 
 void create_panel_hash(PANEL* p) {
@@ -87,6 +99,11 @@ void create_field_hash(FIELD* f) {
     char* hp = f->field_hash + i*cPANEL_HASH_LENGTH;
     memcpy((void*)hp, (void*)p->hash, cPANEL_HASH_LENGTH);
   }
+
+  for (i = 0; i < hash_length; i++) {
+    printf("%d", f->field_hash[i]);
+  }
+  printf("\n");
 }
 
 void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type) {
@@ -189,7 +206,8 @@ int chk_panel_move(FIELD* field, int panel_idx, int dir) {
   }
 
   //printf("tmp_panel - w:%d,h:%d,x:%d,y:%d\n", tmp_panel.width, tmp_panel.height, tmp_panel.x, tmp_panel.y);
-  for (int i = 0; i < field->panel_count; i++) {
+  int i = 0;
+  for (i = 0; i < field->panel_count; i++) {
       if (i == panel_idx) {
         continue;
       }
@@ -327,6 +345,8 @@ int dataread_from_file(char* fname, FIELD* field) {
   }
   fclose(fp);
 
+  create_field_hash(field);
+
   return TRUE;
 }
 
@@ -345,6 +365,37 @@ void chk_panel_move_test(FIELD* field, int panel_idx) {
       printf("chk_panel_move:%d:%s - FALSE\n", panel_idx, dir_comments[i]);
     }
   }
+}
+
+int chk_clear_field(FIELD* f) {
+  int i = 0;
+  for (i = 0; i < f->panel_count; i++) {
+    PANEL* p = &f->panels[i];
+    if (p->type == cPANELTYPE_TARGET) {
+      if ((p->x+p->width == f->end_x) && (p->y+p->height == f->end_y)) {
+        return TRUE;
+      }
+      else {
+        return FALSE;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+int solve_field(FIELD* f) {
+  int i = 0;
+  //FIELD tmp_fields[eDIR_MAX];
+
+  for (i = 0; i < f->panel_count; i++) {
+
+  }
+
+  for (i = 0; i < eDIR_MAX; i++) {
+
+  }
+  return FALSE;
 }
 
 int main(int argc, char** argv) {
