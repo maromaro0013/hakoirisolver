@@ -15,6 +15,8 @@
 
 #define cPANEL_HASH_LENGTH (8)
 
+#define cSOLVE_LEAVES_MAX (64)
+
 enum {
   eDIR_UP = 0,
   eDIR_DOWN,
@@ -23,7 +25,14 @@ enum {
   eDIR_MAX
 };
 
-typedef struct {
+enum {
+  eSOLVESTATE_CONTINUE = 0,
+  eSOLVESTATE_FAILED,
+  eSOLVESTATE_SUCCEED,
+  eSOLVESTATE_MAX
+};
+
+typedef struct PANEL_t {
   char width;
   char height;
   char x;
@@ -35,7 +44,7 @@ typedef struct {
   char hash[cPANEL_HASH_LENGTH];
 }PANEL;
 
-typedef struct {
+typedef struct FIELD_t {
   char width;
   char height;
 
@@ -43,12 +52,21 @@ typedef struct {
   char end_y;
 
   int panel_count;
-  int solve_depth;
 
   PANEL panels[cPANELS_MAX];
 
   char* field_hash;
 }FIELD;
+
+typedef struct SOLVE_TREE_t {
+  int depth;
+  int leaves_count;
+
+  FIELD field;
+  struct SOLVE_TREE_t* leaves[cSOLVE_LEAVES_MAX];
+}SOLVE_TREE;
+
+
 
 void set_field_data(FIELD* f, char w, char h, char end_x, char end_y) {
   f->width = w;
@@ -58,7 +76,6 @@ void set_field_data(FIELD* f, char w, char h, char end_x, char end_y) {
   f->end_y = end_y;
 
   f->field_hash = NULL;
-  f->solve_depth = 0;
 }
 
 void copy_field(FIELD* source, FIELD* dest) {
@@ -154,15 +171,6 @@ int panel_collision(PANEL* p0, PANEL* p1) {
   }
   return FALSE;
 }
-
-/*
-int panel_collision_to_panel(PANEL* p0, PANEL* p1) {
-  if (panel_collision(p0, p1)) {
-    return TRUE;
-  }
-  return FALSE;
-}
-*/
 
 int chk_panel_move(FIELD* field, int panel_idx, int dir) {
   if (panel_idx >= field->panel_count) {
@@ -350,6 +358,7 @@ int dataread_from_file(char* fname, FIELD* field) {
   return TRUE;
 }
 
+/*
 void chk_panel_move_test(FIELD* field, int panel_idx) {
   int i = 0;
 
@@ -366,6 +375,7 @@ void chk_panel_move_test(FIELD* field, int panel_idx) {
     }
   }
 }
+*/
 
 int chk_clear_field(FIELD* f) {
   int i = 0;
@@ -384,17 +394,48 @@ int chk_clear_field(FIELD* f) {
   return FALSE;
 }
 
+void init_solve_leaf(SOLVE_TREE* leaf, int depth) {
+  leaf->depth = depth;
+  leaf->leaves_count = 0;
+  int i = 0;
+  for (i = 0; i < cSOLVE_LEAVES_MAX; i++) {
+    leaf->leaves[i] = NULL;
+  }
+}
+
+int grow_solve_tree(SOLVE_TREE* leaf, int depth) {
+  int i = 0;
+  int ret = eSOLVESTATE_FAILED;
+
+  if (leaf->depth < depth) {
+    for (i = 0; i < leaf->leaves_count; i++) {
+      grow_solve_tree(leaf->leaves[i], depth);
+    }
+  }
+
+  if (chk_clear_field(&leaf->field)) {
+    return eSOLVESTATE_SUCCEED;
+  }
+
+  for (i = 0; i < leaf->field.panel_count; i++) {
+    PANEL* p = &leaf->field.panels[i];
+    int j = 0;
+    for (j = 0; j < eDIR_MAX; j++) {
+      if (chk_panel_move(&leaf->field, i, j)) {
+        //leaf->
+      }
+    }
+  }
+
+  return ret;
+}
+
 int solve_field(FIELD* f) {
   int i = 0;
+  int depth = 0;
   //FIELD tmp_fields[eDIR_MAX];
 
-  for (i = 0; i < f->panel_count; i++) {
 
-  }
-
-  for (i = 0; i < eDIR_MAX; i++) {
-
-  }
   return FALSE;
 }
 
