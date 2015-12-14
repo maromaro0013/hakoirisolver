@@ -11,11 +11,11 @@
 #define cPANELTYPE_TARGET (1)
 
 #define cFIELD_SIZE_MAX (32)
-#define cPANEL_SIZE_MAX (16)
+#define cPANEL_SIZE_MAX (16) // ハッシュ関数の都合で16以上にできない
 
-#define cPANEL_HASH_LENGTH (8)
+#define cPANEL_HASH_LENGTH (4)
 
-#define cSOLVE_LEAVES_MAX (64)
+#define cSOLVE_LEAVES_MAX (16)
 
 enum {
   eDIR_UP = 0,
@@ -39,7 +39,6 @@ typedef struct PANEL_t {
   char y;
 
   char type;
-  char padd[3];
 
   char hash[cPANEL_HASH_LENGTH];
 }PANEL;

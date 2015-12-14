@@ -24,15 +24,18 @@ void copy_field(FIELD* source, FIELD* dest) {
 }
 
 void create_panel_hash(PANEL* p) {
+  p->hash[0] = (p->width << 4) | (p->height);
+  p->hash[1] = p->x;
+  p->hash[2] = p->y;
+  p->hash[3] = p->type;
+/*
   p->hash[0] = p->width;
   p->hash[1] = p->height;
   p->hash[2] = p->x;
   p->hash[3] = p->y;
 
   p->hash[4] = p->type;
-  p->hash[5] = p->padd[0];
-  p->hash[6] = p->padd[1];
-  p->hash[7] = p->padd[2];
+*/
 }
 
 void delete_field_hash(FIELD* f) {
@@ -56,12 +59,22 @@ void create_field_hash(FIELD* f) {
     char* hp = f->field_hash + i*cPANEL_HASH_LENGTH;
     memcpy((void*)hp, (void*)p->hash, cPANEL_HASH_LENGTH);
   }
-/*
-  for (i = 0; i < hash_length; i++) {
-    printf("%d", f->field_hash[i]);
+}
+
+// 前回のハッシュを参考にするパターン
+// 1パネルしか変更がない場合に有効
+void create_field_hash_from_before(FIELD* f, char* before, int idx) {
+  int hash_length = f->panel_count*cPANEL_HASH_LENGTH;
+  if (f->field_hash != NULL) {
+    free(f->field_hash);
+    f->field_hash = NULL;
   }
-  printf("\n");
-*/
+  f->field_hash = (char*)malloc(hash_length);
+
+  memcpy((void*)f->field_hash, (void*)before, hash_length);
+  char* hp = f->field_hash + idx*cPANEL_HASH_LENGTH;
+  PANEL* p = &f->panels[idx];
+  memcpy((void*)hp, (void*)p->hash, cPANEL_HASH_LENGTH);
 }
 
 void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type) {
@@ -209,10 +222,10 @@ int data_validate(FIELD* field) {
   int i = 0;
   for (i = 0; i < field->panel_count; i++) {
     PANEL* p = &field->panels[i];
-    if (p->width <= 0 || p->width > cPANEL_SIZE_MAX) {
+    if (p->width <= 0 || p->width >= cPANEL_SIZE_MAX) {
       return FALSE;
     }
-    if (p->height <= 0 || p->height > cPANEL_SIZE_MAX) {
+    if (p->height <= 0 || p->height >=cPANEL_SIZE_MAX) {
       return FALSE;
     }
 
@@ -299,7 +312,7 @@ int dataread_from_file(char* fname, FIELD* field) {
   return TRUE;
 }
 
-
+/*
 void chk_panel_move_test(FIELD* field, int panel_idx) {
   int i = 0;
 
@@ -316,6 +329,7 @@ void chk_panel_move_test(FIELD* field, int panel_idx) {
     }
   }
 }
+*/
 
 int chk_clear_field(FIELD* f) {
   int i = 0;
@@ -358,12 +372,12 @@ void destroy_solve_tree(SOLVE_TREE* leaf) {
 }
 
 int chk_hash_from_root(SOLVE_TREE* leaf, FIELD* f) {
-  int hash_length = f->panel_count*cPANEL_HASH_LENGTH;
-
   if (leaf->field.field_hash == NULL || f->field_hash == NULL) {
     printf("chk_hash_from_root:error!\n");
     return TRUE;
   }
+
+  int hash_length = f->panel_count*cPANEL_HASH_LENGTH;
 
   if (memcmp(leaf->field.field_hash, f->field_hash, hash_length) == 0) {
     return TRUE;
@@ -429,18 +443,23 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
       if (!chk_panel_move(&leaf->field, i, j)) {
         continue;
       }
-      printf("%d - %d\n", i, j);
 
       FIELD tmp_field;
       copy_field(&leaf->field, &tmp_field);
       move_panel(&tmp_field, i, j);
-      create_field_hash(&tmp_field);
+      //create_field_hash(&tmp_field);
+      create_field_hash_from_before(&tmp_field, leaf->field.field_hash, i);
       // compare hash
       if (chk_hash_from_root(root, &tmp_field)) {
         delete_field_hash(&tmp_field);
         continue;
       }
       delete_field_hash(&tmp_field);
+
+      if ( (leaf->leaves_count+1) >= cSOLVE_LEAVES_MAX) {
+        printf("error over leaves\n");
+        return FALSE;
+      }
 
       leaf->leaves[leaf->leaves_count] = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
       SOLVE_TREE* new_leaf = leaf->leaves[leaf->leaves_count];
@@ -449,7 +468,8 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
       new_leaf->depth = depth + 1;
       new_leaf->leaves_count = 0;
       move_panel(&new_leaf->field, i, j);
-      create_field_hash(&new_leaf->field);
+      //create_field_hash(&new_leaf->field);
+      create_field_hash_from_before(&new_leaf->field, leaf->field.field_hash, i);
 
       leaf->leaves_count++;
     }
@@ -465,7 +485,7 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
 int solve_field(FIELD* f) {
   int i = 0;
   int depth = 0;
-  int max_depth = 1;
+  int max_depth = 20;
   SOLVE_TREE* root = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
 
   root->depth = 0;
@@ -496,6 +516,7 @@ int solve_field(FIELD* f) {
 
     leaves_count = count_leaves_from_depth(root, i);
     printf("depth:%d - leaves:%d\n", i, leaves_count);
+    //printf("depth:%d\n", i);
   }
 
   destroy_solve_tree(root);
