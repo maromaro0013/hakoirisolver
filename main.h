@@ -8,10 +8,11 @@
 #define cPANELTYPE_COMMON (0)
 #define cPANELTYPE_TARGET (1)
 
-#define cFIELD_SIZE_MAX (16)  // ハッシュ関数の都合で16以上にできない
-#define cPANEL_SIZE_MAX (16) // ハッシュ関数の都合で16以上にできない
+#define cFIELD_SIZE_LIMIT (8)  // ハッシュ関数の都合で16以上にできない
+#define cPANEL_SIZE_LIMIT (4)  // ハッシュ関数の都合で4以上にできない
 
-#define cPANELS_MAX (cFIELD_SIZE_MAX*cFIELD_SIZE_MAX)
+#define cPANELS_MAX (cFIELD_SIZE_LIMIT*cFIELD_SIZE_LIMIT)
+#define cPANEL_SIZE_PATTERNS (cPANEL_SIZE_LIMIT*cPANEL_SIZE_LIMIT)
 
 #define cPANEL_HASH_LENGTH (2)
 

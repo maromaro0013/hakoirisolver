@@ -1,5 +1,7 @@
 #include "main.h"
 
+static char panel_limit_dp[cPANEL_SIZE_PATTERNS][cPANELS_MAX][eDIR_MAX];
+
 void set_field_data(FIELD* f, char w, char h, char end_x, char end_y) {
   f->width = w;
   f->height = h;
@@ -26,7 +28,7 @@ void copy_field(FIELD* source, FIELD* dest) {
 }
 
 void create_panel_hash(PANEL* p) {
-  p->hash[0] = (p->width << 4) | (p->height);
+  p->hash[0] = (p->width << 2) | (p->height);
   p->hash[1] = (p->x << 4) | (p->y);
 
   // 必ずtarget(娘)はサイズがユニークであること！
@@ -130,6 +132,27 @@ int panel_collision(PANEL* p0, PANEL* p1) {
   return FALSE;
 }
 
+// 移動判定のメモ化配列の初期化
+void init_panel_limit_dp() {
+  memset(panel_limit_dp, -1, sizeof(panel_limit_dp));
+}
+
+int chk_panel_limit(FIELD* f, PANEL* p) {
+  if (p->y < 0) {
+    return FALSE;
+  }
+  if (p->y + p->height > f->height) {
+    return FALSE;
+  }
+  if (p->x < 0) {
+    return FALSE;
+  }
+  if (p->x + p->width > f->width) {
+    return FALSE;
+  }
+  return TRUE;
+}
+
 int chk_panel_move(FIELD* field, int panel_idx, int dir) {
   if (panel_idx >= field->panel_count) {
     return FALSE;
@@ -138,40 +161,34 @@ int chk_panel_move(FIELD* field, int panel_idx, int dir) {
   PANEL* p = &field->panels[panel_idx];
   PANEL tmp_panel = *p;
 
-  switch (dir) {
-    case eDIR_UP:
-      if (tmp_panel.y <= 0) {
-        return FALSE;
-      }
-      tmp_panel.y -= 1;
-    break;
+  int dir_move_arr[eDIR_MAX][2] = {
+    {0, -1},
+    {0, +1},
+    {-1, 0},
+    {+1, 0}
+  };
 
-    case eDIR_DOWN:
-      if (tmp_panel.y + tmp_panel.height + 1 > field->height) {
-        return FALSE;
-      }
-      tmp_panel.y += 1;
-    break;
+  tmp_panel.x += dir_move_arr[dir][0];
+  tmp_panel.y += dir_move_arr[dir][1];
 
-    case eDIR_LEFT:
-      if (tmp_panel.x <= 0) {
-        return FALSE;
-      }
-      tmp_panel.x -= 1;
-    break;
+  int limit_flg = FALSE;
+  int size_idx = (tmp_panel.width << 2) | (tmp_panel.height); // 0~15
+  int p_idx = (tmp_panel.x << 3) | (tmp_panel.y); // 0~63
+  int dir_idx = dir; // 0~3
 
-    case eDIR_RIGHT:
-      if (tmp_panel.x + tmp_panel.width + 1 > field->width) {
-        return FALSE;
-      }
-      tmp_panel.x += 1;
-    break;
-
-    default:
+  if (panel_limit_dp[size_idx][p_idx][dir_idx] != -1) {
+    if (panel_limit_dp[size_idx][p_idx][dir_idx] == 1) {
       return FALSE;
+    }
+  }
+  else {
+    if (chk_panel_limit(field, &tmp_panel) == FALSE) {
+      panel_limit_dp[size_idx][p_idx][dir_idx] = 1;
+      return FALSE;
+    }
+    panel_limit_dp[size_idx][p_idx][dir_idx] = 0;
   }
 
-  //printf("tmp_panel - w:%d,h:%d,x:%d,y:%d\n", tmp_panel.width, tmp_panel.height, tmp_panel.x, tmp_panel.y);
   int i = 0;
   for (i = 0; i < field->panel_count; i++) {
       if (i == panel_idx) {
@@ -220,20 +237,20 @@ int data_validate(FIELD* field) {
     return FALSE;
   }
 
-  if (field->width <= 0 || field->width > cFIELD_SIZE_MAX) {
+  if (field->width <= 0 || field->width >= cFIELD_SIZE_LIMIT) {
     return FALSE;
   }
-  if (field->height <= 0 || field->height > cFIELD_SIZE_MAX) {
+  if (field->height <= 0 || field->height >= cFIELD_SIZE_LIMIT) {
     return FALSE;
   }
 
   int i = 0;
   for (i = 0; i < field->panel_count; i++) {
     PANEL* p = &field->panels[i];
-    if (p->width <= 0 || p->width >= cPANEL_SIZE_MAX) {
+    if (p->width <= 0 || p->width > cPANEL_SIZE_LIMIT) {
       return FALSE;
     }
-    if (p->height <= 0 || p->height >=cPANEL_SIZE_MAX) {
+    if (p->height <= 0 || p->height > cPANEL_SIZE_LIMIT) {
       return FALSE;
     }
 
@@ -545,6 +562,7 @@ int main(int argc, char** argv) {
     chk_panel_move_test(&field, i);
   }
 */
+  init_panel_limit_dp();
   solve_field(&field);
 
   return 0;
