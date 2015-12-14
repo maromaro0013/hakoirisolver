@@ -27,9 +27,12 @@ void copy_field(FIELD* source, FIELD* dest) {
 
 void create_panel_hash(PANEL* p) {
   p->hash[0] = (p->width << 4) | (p->height);
-  p->hash[1] = p->x;
-  p->hash[2] = p->y;
-  p->hash[3] = p->type;
+  p->hash[1] = (p->x << 4) | (p->y);
+
+  // 必ずtarget(娘)はサイズがユニークであること！
+  // https://ja.wikipedia.org/wiki/%E7%AE%B1%E5%85%A5%E3%82%8A%E5%A8%98_(%E3%83%91%E3%82%BA%E3%83%AB)
+
+//  p->hash[2] = p->type;
 /*
   p->hash[0] = p->width;
   p->hash[1] = p->height;
@@ -112,18 +115,14 @@ int panel_collision(PANEL* p0, PANEL* p1) {
     if (y0 >= y2 && y0 < y3) {
       return TRUE;
     }
-  }
-  if (x1 > x2 && x1 <= x3) {
-    if (y1 > y2 && y1 <= y3) {
-      return TRUE;
-    }
-  }
-  if (x0 >= x2 && x0 < x3) {
     if (y1 > y2 && y1 <= y3) {
       return TRUE;
     }
   }
   if (x1 > x2 && x1 <= x3) {
+    if (y1 > y2 && y1 <= y3) {
+      return TRUE;
+    }
     if (y0 >= y2 && y0 < y3) {
       return TRUE;
     }
