@@ -358,14 +358,53 @@ void destroy_solve_tree(SOLVE_TREE* leaf) {
   free(leaf);
 }
 
-int grow_solve_tree(SOLVE_TREE* leaf, int depth) {
+int chk_hash_from_root(SOLVE_TREE* leaf, FIELD* f) {
+  int hash_length = f->panel_count*cPANEL_HASH_LENGTH;
+
+  if (leaf->field.field_hash == NULL || f->field_hash == NULL) {
+    printf("chk_hash_from_root:error!\n");
+    return TRUE;
+  }
+
+  if (memcmp(leaf->field.field_hash, f->field_hash, hash_length) == 0) {
+    return TRUE;
+  }
+
+  int i = 0;
+  for (i = 0; i < leaf->leaves_count; i++) {
+    int ret = 0;
+    SOLVE_TREE* p = leaf->leaves[i];
+    ret = chk_hash_from_root(p, f);
+    if (ret == TRUE) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+int count_leaves_from_depth(SOLVE_TREE* leaf, int depth) {
+  int ret = leaf->leaves_count;
+  int i = 0;
+
+  if (leaf->depth >= depth) {
+    return ret;
+  }
+
+  for (i = 0; i < leaf->leaves_count; i++) {
+    ret += count_leaves_from_depth(leaf->leaves[i], depth);
+  }
+  return ret;
+}
+
+int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
   int i = 0;
   int j = 0;
 
   if (leaf->depth < depth) {
     int ret = eSOLVESTATE_FAILED;
     for (i = 0; i < leaf->leaves_count; i++) {
-      int tmp = grow_solve_tree(leaf->leaves[i], depth);
+      int tmp = grow_solve_tree(root, leaf->leaves[i], depth);
       switch (tmp) {
         case eSOLVESTATE_CONTINUE:
           ret = eSOLVESTATE_CONTINUE;
@@ -385,11 +424,21 @@ int grow_solve_tree(SOLVE_TREE* leaf, int depth) {
     return eSOLVESTATE_SUCCEED;
   }
 
-  //printf("testmokyun:%d \n", leaf->field.panel_count);
   for (i = 0; i < leaf->field.panel_count; i++) {
     PANEL* p = &leaf->field.panels[i];
     for (j = 0; j < eDIR_MAX; j++) {
       if (chk_panel_move(&leaf->field, i, j)) {
+        FIELD tmp_field;
+        copy_field(&leaf->field, &tmp_field);
+        move_panel(&tmp_field, i, j);
+        create_field_hash(&tmp_field);
+        // compare hash
+        if (chk_hash_from_root(root, &tmp_field)) {
+          delete_field_hash(&tmp_field);
+          continue;
+        }
+        delete_field_hash(&tmp_field);
+
         leaf->leaves[leaf->leaves_count] = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
         SOLVE_TREE* new_leaf = leaf->leaves[leaf->leaves_count];
 
@@ -404,7 +453,6 @@ int grow_solve_tree(SOLVE_TREE* leaf, int depth) {
         leaf->leaves_count++;
       }
     }
-    //printf("create leaves - %d\n", leaf->leaves_count);
   }
 
   if (leaf->leaves_count == 0) {
@@ -417,16 +465,18 @@ int grow_solve_tree(SOLVE_TREE* leaf, int depth) {
 int solve_field(FIELD* f) {
   int i = 0;
   int depth = 0;
-  int max_depth = 5;
+  int max_depth = 10;
   SOLVE_TREE* root = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
 
   root->depth = 0;
   root->leaves_count = 0;
   copy_field(f, &root->field);
+  create_field_hash(&root->field);
 
   int ret = 0;
+  int leaves_count = 0;
   for (i = 0; i < max_depth; i++) {
-    ret = grow_solve_tree(root, i);
+    ret = grow_solve_tree(root, root, i);
     switch (ret) {
       case eSOLVESTATE_CONTINUE:
         printf("solve_field:CONTINUE - depth:%d\n", i);
@@ -443,6 +493,9 @@ int solve_field(FIELD* f) {
       default:
       break;
     }
+
+    leaves_count = count_leaves_from_depth(root, i);
+    printf("depth:%d - leaves:%d\n", i, leaves_count);
   }
 
   destroy_solve_tree(root);
