@@ -16,9 +16,11 @@ void copy_field(FIELD* source, FIELD* dest) {
   dest->end_x = source->end_x;
   dest->end_y = source->end_y;
 
-  dest->field_hash = NULL;
+  dest->panel_count = source->panel_count;
 
   memcpy((void*)&dest->panels[0], &source->panels[0], sizeof(dest->panels));
+
+  dest->field_hash = NULL;
 }
 
 void create_panel_hash(PANEL* p) {
@@ -361,15 +363,29 @@ int grow_solve_tree(SOLVE_TREE* leaf, int depth) {
   int j = 0;
 
   if (leaf->depth < depth) {
+    int ret = eSOLVESTATE_FAILED;
     for (i = 0; i < leaf->leaves_count; i++) {
-      grow_solve_tree(leaf->leaves[i], depth);
+      int tmp = grow_solve_tree(leaf->leaves[i], depth);
+      switch (tmp) {
+        case eSOLVESTATE_CONTINUE:
+          ret = eSOLVESTATE_CONTINUE;
+        break;
+
+        case eSOLVESTATE_FAILED:
+        break;
+
+        case eSOLVESTATE_SUCCEED:
+          return eSOLVESTATE_SUCCEED;
+      }
     }
+    return ret;
   }
 
   if (chk_clear_field(&leaf->field)) {
     return eSOLVESTATE_SUCCEED;
   }
 
+  //printf("testmokyun:%d \n", leaf->field.panel_count);
   for (i = 0; i < leaf->field.panel_count; i++) {
     PANEL* p = &leaf->field.panels[i];
     for (j = 0; j < eDIR_MAX; j++) {
@@ -388,6 +404,11 @@ int grow_solve_tree(SOLVE_TREE* leaf, int depth) {
         leaf->leaves_count++;
       }
     }
+    //printf("create leaves - %d\n", leaf->leaves_count);
+  }
+
+  if (leaf->leaves_count == 0) {
+    return eSOLVESTATE_FAILED;
   }
 
   return eSOLVESTATE_CONTINUE;
@@ -396,15 +417,32 @@ int grow_solve_tree(SOLVE_TREE* leaf, int depth) {
 int solve_field(FIELD* f) {
   int i = 0;
   int depth = 0;
-  int max_depth = 2;
+  int max_depth = 5;
   SOLVE_TREE* root = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
 
   root->depth = 0;
   root->leaves_count = 0;
   copy_field(f, &root->field);
 
-  for (i = 1; i <= max_depth; i++) {
-    grow_solve_tree(root, i);
+  int ret = 0;
+  for (i = 0; i < max_depth; i++) {
+    ret = grow_solve_tree(root, i);
+    switch (ret) {
+      case eSOLVESTATE_CONTINUE:
+        printf("solve_field:CONTINUE - depth:%d\n", i);
+      break;
+
+      case eSOLVESTATE_FAILED:
+        printf("solve_field:FAILED - depth:%d\n", i);
+      break;
+
+      case eSOLVESTATE_SUCCEED:
+        printf("solve_field:SUCCEED - depth:%d\n", i);
+      break;
+
+      default:
+      break;
+    }
   }
 
   destroy_solve_tree(root);
@@ -425,22 +463,8 @@ int main(int argc, char** argv) {
     printf("data error\n");
     return 1;
   }
-  // test "chk_panel_move"
-  //chk_panel_move_test(&field, 9);
 
-  /*
-  int i = 0;
-  for (i = 0; i < field.panel_count; i++) {
-    PANEL* p = &field.panels[i];
-    chk_panel_move_test(&field, i);
-    int j = 0;
-    for (j = 0; j < 8; j++) {
-      printf("%d,", p->hash[j]);
-    }
-    printf("\n");
-  }
-  */
-
+  solve_field(&field);
 
   return 0;
 }
