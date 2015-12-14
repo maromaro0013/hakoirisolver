@@ -34,16 +34,6 @@ void create_panel_hash(PANEL* p) {
   //printf("%02x:%02x:%02x:%02x - %02x:%02x\n", p->width, p->height, p->x, p->y, p->hash[0], p->hash[1]);
   // 必ずtarget(娘)はサイズがユニークであること！
   // https://ja.wikipedia.org/wiki/%E7%AE%B1%E5%85%A5%E3%82%8A%E5%A8%98_(%E3%83%91%E3%82%BA%E3%83%AB)
-
-//  p->hash[2] = p->type;
-/*
-  p->hash[0] = p->width;
-  p->hash[1] = p->height;
-  p->hash[2] = p->x;
-  p->hash[3] = p->y;
-
-  p->hash[4] = p->type;
-*/
 }
 
 void delete_field_hash(FIELD* f) {
@@ -78,50 +68,14 @@ void create_field_hash(FIELD* f) {
     memcpy(&hash_ary[j + 1], &hash_ary[j], sizeof(int)*(cPANELS_MAX - j - 1));
     hash_ary[j] = hash;
   }
-  //printf("mokyun\n");
 
   f->field_hash = (char*)malloc(hash_length);
   char* hp = f->field_hash;
   for (i = 0; i < f->panel_count; i++) {
     memcpy((void*)hp, (void*)&hash_ary[i], cPANEL_HASH_LENGTH);
     hp += cPANEL_HASH_LENGTH;
-//    printf("%04x\n", hash_ary[i]);
   }
-
-/*
-  for (i = 0; i < hash_length; i++) {
-    printf("%02x:", f->field_hash[i]);
-  }
-  printf("\n");
-*/
-
-/*
-  f->field_hash = (char*)malloc(hash_length);
-  for (i = 0; i < f->panel_count; i++) {
-    PANEL* p = &f->panels[i];
-    char* hp = f->field_hash + i*cPANEL_HASH_LENGTH;
-    memcpy((void*)hp, (void*)p->hash, cPANEL_HASH_LENGTH);
-  }
-*/
 }
-
-// 前回のハッシュを参考にするパターン
-// 1パネルしか変更がない場合に有効
-/*
-void create_field_hash_from_before(FIELD* f, char* before, int idx) {
-  int hash_length = f->panel_count*cPANEL_HASH_LENGTH;
-  if (f->field_hash != NULL) {
-    free(f->field_hash);
-    f->field_hash = NULL;
-  }
-  f->field_hash = (char*)malloc(hash_length);
-
-  memcpy((void*)f->field_hash, (void*)before, hash_length);
-  char* hp = f->field_hash + idx*cPANEL_HASH_LENGTH;
-  PANEL* p = &f->panels[idx];
-  memcpy((void*)hp, (void*)p->hash, cPANEL_HASH_LENGTH);
-}
-*/
 
 void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type) {
   PANEL* p = &field->panels[field->panel_count];
@@ -369,25 +323,6 @@ int dataread_from_file(char* fname, FIELD* field) {
   return TRUE;
 }
 
-/*
-void chk_panel_move_test(FIELD* field, int panel_idx) {
-  int i = 0;
-
-  char dir_comments[eDIR_MAX][8] = {
-    "UP", "DOWN", "LEFT", "RIGHT"
-  };
-
-  for (i = 0; i < eDIR_MAX; i++) {
-    if (chk_panel_move(field, panel_idx, i)) {
-      printf("chk_panel_move:%d:%s - TRUE\n", panel_idx, dir_comments[i]);
-    }
-    else {
-      printf("chk_panel_move:%d:%s - FALSE\n", panel_idx, dir_comments[i]);
-    }
-  }
-}
-*/
-
 int chk_clear_field(FIELD* f) {
   int idx = f->target_idx;
 
@@ -395,8 +330,6 @@ int chk_clear_field(FIELD* f) {
   if ((p->x+p->width == f->end_x) && (p->y+p->height == f->end_y)) {
     return TRUE;
   }
-
-  //printf("%d - %d==%d && %d==%d\n", idx, p->x+p->width, f->end_x, p->y+p->height, f->end_y);
   return FALSE;
 }
 
@@ -560,8 +493,8 @@ int solve_field(FIELD* f) {
       break;
     }
 
-    leaves_count = count_leaves_from_depth(root, i);
-    printf("depth:%d - leaves:%d\n", i, leaves_count);
+//    leaves_count = count_leaves_from_depth(root, i);
+//    printf("depth:%d - leaves:%d\n", i, leaves_count);
 
     if (ret == eSOLVESTATE_FAILED || ret == eSOLVESTATE_SUCCEED) {
       break;
@@ -588,17 +521,6 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-/*
-  char test = 0;
-  test = (3 << 4) | (0);
-  printf("%02x\n", test);
-*/
-/*
-  int i = 0;
-  for (i = 0; i < 11; i++) {
-    chk_panel_move_test(&field, i);
-  }
-*/
   init_panel_limit_dp();
   solve_field(&field);
 
