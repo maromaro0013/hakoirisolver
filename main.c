@@ -20,7 +20,7 @@ void copy_field(FIELD* source, FIELD* dest) {
   dest->end_y = source->end_y;
 
   dest->panel_count = source->panel_count;
-  dest->target_idx = source->panel_count;
+  dest->target_idx = source->target_idx;
 
   memcpy((void*)&dest->panels[0], &source->panels[0], sizeof(dest->panels));
 
@@ -28,9 +28,10 @@ void copy_field(FIELD* source, FIELD* dest) {
 }
 
 void create_panel_hash(PANEL* p) {
-  p->hash[0] = (p->width << 2) | (p->height);
+  p->hash[0] = (p->width << 4) | (p->height);
   p->hash[1] = (p->x << 4) | (p->y);
 
+  //printf("%02x:%02x:%02x:%02x - %02x:%02x\n", p->width, p->height, p->x, p->y, p->hash[0], p->hash[1]);
   // 必ずtarget(娘)はサイズがユニークであること！
   // https://ja.wikipedia.org/wiki/%E7%AE%B1%E5%85%A5%E3%82%8A%E5%A8%98_(%E3%83%91%E3%82%BA%E3%83%AB)
 
@@ -54,22 +55,59 @@ void delete_field_hash(FIELD* f) {
 
 void create_field_hash(FIELD* f) {
   int i = 0;
+  int j = 0;
+  int hash = 0;
+  int tmp_hash = 0;
 
   int hash_length = f->panel_count*cPANEL_HASH_LENGTH;
   if (f->field_hash != NULL) {
     free(f->field_hash);
     f->field_hash = NULL;
   }
+
+  int hash_ary[cPANELS_MAX];
+  memset(hash_ary, 0, sizeof(hash_ary));
+  for (i = 0; i < f->panel_count; i++) {
+    hash = (f->panels[i].hash[0] << 8) | (f->panels[i].hash[1]);
+    //printf("%02x-%02x : %04x\n", f->panels[i].hash[0], f->panels[i].hash[1], hash);
+    for (j = 0; j < i; j++) {
+      if (hash < hash_ary[j]) {
+        break;
+      }
+    }
+    memcpy(&hash_ary[j + 1], &hash_ary[j], sizeof(int)*(cPANELS_MAX - j - 1));
+    hash_ary[j] = hash;
+  }
+  //printf("mokyun\n");
+
+  f->field_hash = (char*)malloc(hash_length);
+  char* hp = f->field_hash;
+  for (i = 0; i < f->panel_count; i++) {
+    memcpy((void*)hp, (void*)&hash_ary[i], cPANEL_HASH_LENGTH);
+    hp += cPANEL_HASH_LENGTH;
+//    printf("%04x\n", hash_ary[i]);
+  }
+
+/*
+  for (i = 0; i < hash_length; i++) {
+    printf("%02x:", f->field_hash[i]);
+  }
+  printf("\n");
+*/
+
+/*
   f->field_hash = (char*)malloc(hash_length);
   for (i = 0; i < f->panel_count; i++) {
     PANEL* p = &f->panels[i];
     char* hp = f->field_hash + i*cPANEL_HASH_LENGTH;
     memcpy((void*)hp, (void*)p->hash, cPANEL_HASH_LENGTH);
   }
+*/
 }
 
 // 前回のハッシュを参考にするパターン
 // 1パネルしか変更がない場合に有効
+/*
 void create_field_hash_from_before(FIELD* f, char* before, int idx) {
   int hash_length = f->panel_count*cPANEL_HASH_LENGTH;
   if (f->field_hash != NULL) {
@@ -83,6 +121,7 @@ void create_field_hash_from_before(FIELD* f, char* before, int idx) {
   PANEL* p = &f->panels[idx];
   memcpy((void*)hp, (void*)p->hash, cPANEL_HASH_LENGTH);
 }
+*/
 
 void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type) {
   PANEL* p = &field->panels[field->panel_count];
@@ -96,6 +135,7 @@ void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type)
 
   if (p->type == cPANELTYPE_TARGET) {
     field->target_idx = field->panel_count;
+    //printf("%d\n", field->target_idx);
   }
   field->panel_count++;
 
@@ -167,7 +207,6 @@ int chk_panel_move(FIELD* field, int panel_idx, int dir) {
     {-1, 0},
     {+1, 0}
   };
-
   tmp_panel.x += dir_move_arr[dir][0];
   tmp_panel.y += dir_move_arr[dir][1];
 
@@ -209,23 +248,15 @@ int move_panel(FIELD* field, int panel_idx, int dir) {
   }
 
   PANEL* p = &field->panels[panel_idx];
-  switch (dir) {
-    case eDIR_UP:
-      p->y -= 1;
-    break;
-    case eDIR_DOWN:
-      p->y += 1;
-    break;
-    case eDIR_LEFT:
-      p->x -= 1;
-    break;
-    case eDIR_RIGHT:
-      p->x += 1;
-    break;
 
-    default:
-    break;
-  }
+  int dir_move_arr[eDIR_MAX][2] = {
+    {0, -1},
+    {0, +1},
+    {-1, 0},
+    {+1, 0}
+  };
+  p->x += dir_move_arr[dir][0];
+  p->y += dir_move_arr[dir][1];
 
   create_panel_hash(p);
 
@@ -328,6 +359,7 @@ int dataread_from_file(char* fname, FIELD* field) {
 
     int type = atoi(str_work);
 
+    //printf("%d,%d,%d,%d,%d\n", panel_x, panel_y, panel_w, panel_h, type);
     add_panel_to_field(field, panel_x, panel_y, panel_w, panel_h, type);
   }
   fclose(fp);
@@ -363,6 +395,8 @@ int chk_clear_field(FIELD* f) {
   if ((p->x+p->width == f->end_x) && (p->y+p->height == f->end_y)) {
     return TRUE;
   }
+
+  //printf("%d - %d==%d && %d==%d\n", idx, p->x+p->width, f->end_x, p->y+p->height, f->end_y);
   return FALSE;
 }
 
@@ -451,7 +485,8 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
     return ret;
   }
 
-  if (chk_clear_field(&leaf->field)) {
+  if (chk_clear_field(&leaf->field) == TRUE) {
+    //printf("ok!!!!!!!!!\n");
     return eSOLVESTATE_SUCCEED;
   }
 
@@ -461,33 +496,29 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
       if (!chk_panel_move(&leaf->field, i, j)) {
         continue;
       }
-
-      FIELD tmp_field;
-      copy_field(&leaf->field, &tmp_field);
-      move_panel(&tmp_field, i, j);
-      //create_field_hash(&tmp_field);
-      create_field_hash_from_before(&tmp_field, leaf->field.field_hash, i);
-      // compare hash
-      if (chk_hash_from_root(root, &tmp_field)) {
-        delete_field_hash(&tmp_field);
-        continue;
-      }
-      delete_field_hash(&tmp_field);
+      //printf("%d:%d\n", i, j);
 
       if ( (leaf->leaves_count+1) >= cSOLVE_LEAVES_MAX) {
         printf("error over leaves\n");
-        return FALSE;
+        return eSOLVESTATE_FAILED;
       }
 
       leaf->leaves[leaf->leaves_count] = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
       SOLVE_TREE* new_leaf = leaf->leaves[leaf->leaves_count];
       copy_field(&leaf->field, &new_leaf->field);
+      move_panel(&new_leaf->field, i, j);
+      //create_field_hash_from_before(&new_leaf->field, leaf->field.field_hash, i);
+      create_field_hash(&new_leaf->field);
 
       new_leaf->depth = depth + 1;
       new_leaf->leaves_count = 0;
-      move_panel(&new_leaf->field, i, j);
-      //create_field_hash(&new_leaf->field);
-      create_field_hash_from_before(&new_leaf->field, leaf->field.field_hash, i);
+
+      // compare hash
+      if (chk_hash_from_root(root, &new_leaf->field) == TRUE) {
+        destroy_solve_tree(new_leaf);
+        leaf->leaves[leaf->leaves_count] = NULL;
+        continue;
+      }
 
       leaf->leaves_count++;
     }
@@ -503,7 +534,7 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
 int solve_field(FIELD* f) {
   int i = 0;
   int depth = 0;
-  int max_depth = 20;
+  int max_depth = 82;
   SOLVE_TREE* root = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
 
   root->depth = 0;
@@ -527,13 +558,14 @@ int solve_field(FIELD* f) {
       case eSOLVESTATE_SUCCEED:
         printf("solve_field:SUCCEED - depth:%d\n", i);
       break;
-
-      default:
-      break;
     }
 
     leaves_count = count_leaves_from_depth(root, i);
     printf("depth:%d - leaves:%d\n", i, leaves_count);
+
+    if (ret == eSOLVESTATE_FAILED || ret == eSOLVESTATE_SUCCEED) {
+      break;
+    }
     //printf("depth:%d\n", i);
   }
 
@@ -556,6 +588,11 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+/*
+  char test = 0;
+  test = (3 << 4) | (0);
+  printf("%02x\n", test);
+*/
 /*
   int i = 0;
   for (i = 0; i < 11; i++) {

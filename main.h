@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #define FALSE (0)
-#define TRUE (1)
+#define TRUE  (1)
 
 #define cPANELTYPE_COMMON (0)
 #define cPANELTYPE_TARGET (1)
@@ -41,7 +41,7 @@ typedef struct PANEL_t {
 
   char type;
 
-  char hash[cPANEL_HASH_LENGTH];
+  unsigned char hash[cPANEL_HASH_LENGTH];
 }PANEL;
 
 typedef struct FIELD_t {
