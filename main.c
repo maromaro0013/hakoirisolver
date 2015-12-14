@@ -81,7 +81,7 @@ void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type)
 
 int panel_collision(PANEL* p0, PANEL* p1) {
   int x0 = p0->x;
-  int x1 = p0->x + p0->x + p0->width;
+  int x1 = p0->x + p0->width;
   int x2 = p1->x;
   int x3 = p1->x + p1->width;
 
@@ -299,7 +299,7 @@ int dataread_from_file(char* fname, FIELD* field) {
   return TRUE;
 }
 
-/*
+
 void chk_panel_move_test(FIELD* field, int panel_idx) {
   int i = 0;
 
@@ -316,7 +316,6 @@ void chk_panel_move_test(FIELD* field, int panel_idx) {
     }
   }
 }
-*/
 
 int chk_clear_field(FIELD* f) {
   int i = 0;
@@ -427,31 +426,32 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
   for (i = 0; i < leaf->field.panel_count; i++) {
     PANEL* p = &leaf->field.panels[i];
     for (j = 0; j < eDIR_MAX; j++) {
-      if (chk_panel_move(&leaf->field, i, j)) {
-        FIELD tmp_field;
-        copy_field(&leaf->field, &tmp_field);
-        move_panel(&tmp_field, i, j);
-        create_field_hash(&tmp_field);
-        // compare hash
-        if (chk_hash_from_root(root, &tmp_field)) {
-          delete_field_hash(&tmp_field);
-          continue;
-        }
-        delete_field_hash(&tmp_field);
-
-        leaf->leaves[leaf->leaves_count] = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
-        SOLVE_TREE* new_leaf = leaf->leaves[leaf->leaves_count];
-
-        copy_field(&leaf->field, &new_leaf->field);
-
-        new_leaf->depth = depth + 1;
-        new_leaf->leaves_count = 0;
-
-        move_panel(&new_leaf->field, i, j);
-        create_field_hash(&new_leaf->field);
-
-        leaf->leaves_count++;
+      if (!chk_panel_move(&leaf->field, i, j)) {
+        continue;
       }
+      printf("%d - %d\n", i, j);
+
+      FIELD tmp_field;
+      copy_field(&leaf->field, &tmp_field);
+      move_panel(&tmp_field, i, j);
+      create_field_hash(&tmp_field);
+      // compare hash
+      if (chk_hash_from_root(root, &tmp_field)) {
+        delete_field_hash(&tmp_field);
+        continue;
+      }
+      delete_field_hash(&tmp_field);
+
+      leaf->leaves[leaf->leaves_count] = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
+      SOLVE_TREE* new_leaf = leaf->leaves[leaf->leaves_count];
+      copy_field(&leaf->field, &new_leaf->field);
+
+      new_leaf->depth = depth + 1;
+      new_leaf->leaves_count = 0;
+      move_panel(&new_leaf->field, i, j);
+      create_field_hash(&new_leaf->field);
+
+      leaf->leaves_count++;
     }
   }
 
@@ -465,7 +465,7 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
 int solve_field(FIELD* f) {
   int i = 0;
   int depth = 0;
-  int max_depth = 10;
+  int max_depth = 1;
   SOLVE_TREE* root = (SOLVE_TREE*)malloc(sizeof(SOLVE_TREE));
 
   root->depth = 0;
@@ -517,6 +517,12 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+/*
+  int i = 0;
+  for (i = 0; i < 11; i++) {
+    chk_panel_move_test(&field, i);
+  }
+*/
   solve_field(&field);
 
   return 0;
