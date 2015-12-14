@@ -5,13 +5,13 @@
 #define FALSE (0)
 #define TRUE (1)
 
-#define cPANELS_MAX (256)
-
 #define cPANELTYPE_COMMON (0)
 #define cPANELTYPE_TARGET (1)
 
-#define cFIELD_SIZE_MAX (32)
+#define cFIELD_SIZE_MAX (8)
 #define cPANEL_SIZE_MAX (16) // ハッシュ関数の都合で16以上にできない
+
+#define cPANELS_MAX (cFIELD_SIZE_MAX*cFIELD_SIZE_MAX)
 
 #define cPANEL_HASH_LENGTH (4)
 
@@ -51,6 +51,7 @@ typedef struct FIELD_t {
   char end_y;
 
   int panel_count;
+  int target_idx;
 
   PANEL panels[cPANELS_MAX];
 

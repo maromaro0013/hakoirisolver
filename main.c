@@ -7,6 +7,7 @@ void set_field_data(FIELD* f, char w, char h, char end_x, char end_y) {
   f->end_x = end_x;
   f->end_y = end_y;
 
+  f->target_idx = -1;
   f->field_hash = NULL;
 }
 
@@ -17,6 +18,7 @@ void copy_field(FIELD* source, FIELD* dest) {
   dest->end_y = source->end_y;
 
   dest->panel_count = source->panel_count;
+  dest->target_idx = source->panel_count;
 
   memcpy((void*)&dest->panels[0], &source->panels[0], sizeof(dest->panels));
 
@@ -87,6 +89,9 @@ void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type)
   p->y = y;
   p->type = type;
 
+  if (p->type == cPANELTYPE_TARGET) {
+    field->target_idx = field->panel_count;
+  }
   field->panel_count++;
 
   create_panel_hash(p);
@@ -212,6 +217,10 @@ int move_panel(FIELD* field, int panel_idx, int dir) {
 }
 
 int data_validate(FIELD* field) {
+  if (field->target_idx < 0) {
+    return FALSE;
+  }
+
   if (field->width <= 0 || field->width > cFIELD_SIZE_MAX) {
     return FALSE;
   }
@@ -332,19 +341,12 @@ void chk_panel_move_test(FIELD* field, int panel_idx) {
 */
 
 int chk_clear_field(FIELD* f) {
-  int i = 0;
-  for (i = 0; i < f->panel_count; i++) {
-    PANEL* p = &f->panels[i];
-    if (p->type == cPANELTYPE_TARGET) {
-      if ((p->x+p->width == f->end_x) && (p->y+p->height == f->end_y)) {
-        return TRUE;
-      }
-      else {
-        return FALSE;
-      }
-    }
-  }
+  int idx = f->target_idx;
 
+  PANEL* p = &f->panels[idx];
+  if ((p->x+p->width == f->end_x) && (p->y+p->height == f->end_y)) {
+    return TRUE;
+  }
   return FALSE;
 }
 
