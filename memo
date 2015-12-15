@@ -28,5 +28,7 @@
 ・衝突判定のメモ化
 -> 16*64 * 16*64パターン
 
-・main.hの作成
+・field_infoの作成
+
+・main.hの作成 -> ok
 ・makefileを書く

@@ -44,7 +44,7 @@ typedef struct PANEL_t {
   unsigned char hash[cPANEL_HASH_LENGTH];
 }PANEL;
 
-typedef struct FIELD_t {
+typedef struct FIELD_INFO_t {
   char width;
   char height;
 
@@ -53,7 +53,9 @@ typedef struct FIELD_t {
 
   int panel_count;
   int target_idx;
+}FIELD_INFO;
 
+typedef struct FIELD_t {
   PANEL panels[cPANELS_MAX];
 
   char* field_hash;
