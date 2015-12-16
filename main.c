@@ -68,15 +68,8 @@ void delete_field_hashs(FIELD_INFO* info) {
 }
 
 // ---------------------------
-/*
-void set_field_data(FIELD* f) {
-  f->field_hash = NULL;
-}
-*/
 void copy_field(FIELD* source, FIELD* dest) {
   memcpy((void*)&dest->panels[0], &source->panels[0], sizeof(dest->panels));
-
-//  dest->field_hash = NULL;
 }
 
 void create_panel_hash(PANEL* p) {
@@ -87,49 +80,6 @@ void create_panel_hash(PANEL* p) {
   // 必ずtarget(娘)はサイズがユニークであること！
   // https://ja.wikipedia.org/wiki/%E7%AE%B1%E5%85%A5%E3%82%8A%E5%A8%98_(%E3%83%91%E3%82%BA%E3%83%AB)
 }
-/*
-void delete_field_hash(FIELD* f) {
-  if (f->field_hash != NULL) {
-    free(f->field_hash);
-  }
-  f->field_hash = NULL;
-}
-*/
-/*
-void create_field_hash(FIELD* f) {
-  int i = 0;
-  int j = 0;
-  int hash = 0;
-  int tmp_hash = 0;
-  FIELD_INFO* info = &g_field_info;
-
-  int hash_length = info->panel_count*cPANEL_HASH_LENGTH;
-  if (f->field_hash != NULL) {
-    free(f->field_hash);
-    f->field_hash = NULL;
-  }
-
-  int hash_ary[cPANELS_MAX];
-  memset(hash_ary, 0, sizeof(hash_ary));
-  for (i = 0; i < info->panel_count; i++) {
-    hash = (f->panels[i].hash[0] << 8) | (f->panels[i].hash[1]);
-    for (j = 0; j < i; j++) {
-      if (hash < hash_ary[j]) {
-        break;
-      }
-    }
-    memcpy(&hash_ary[j + 1], &hash_ary[j], sizeof(int)*(cPANELS_MAX - j - 1));
-    hash_ary[j] = hash;
-  }
-
-  f->field_hash = (char*)malloc(hash_length);
-  char* hp = f->field_hash;
-  for (i = 0; i < info->panel_count; i++) {
-    memcpy((void*)hp, (void*)&hash_ary[i], cPANEL_HASH_LENGTH);
-    hp += cPANEL_HASH_LENGTH;
-  }
-}
-*/
 
 void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type) {
   FIELD_INFO* info = &g_field_info;
@@ -332,7 +282,6 @@ int dataread_from_file(char* fname, FIELD* field) {
   str_work++;
   int end_y = atoi(str_work);
 
-  //set_field_data(field);
   set_field_info(&g_field_info, w, h, end_x, end_y);
 
   while (fgets(str, sizeof(str), fp) != NULL) {
@@ -376,9 +325,6 @@ int dataread_from_file(char* fname, FIELD* field) {
   }
   fclose(fp);
 
-//  add_field_hash(&g_field_info, &field);
-//  create_field_hash(field);
-
   return TRUE;
 }
 
@@ -411,8 +357,6 @@ void destroy_solve_tree(SOLVE_TREE* leaf) {
   for (i = 0; i < leaf->leaves_count; i++) {
     destroy_solve_tree(leaf->leaves[i]);
   }
-
-//  delete_field_hash(&leaf->field);
   free(leaf);
 }
 
@@ -433,35 +377,6 @@ int chk_hash_and_append(FIELD_INFO* info, FIELD* f) {
   add_field_hash(info, hash);
   return FALSE;
 }
-
-/*
-int chk_hash_from_root(SOLVE_TREE* leaf, FIELD* f) {
-  FIELD_INFO* info = &g_field_info;
-
-  if (leaf->field.field_hash == NULL || f->field_hash == NULL) {
-    printf("chk_hash_from_root:error!\n");
-    return TRUE;
-  }
-
-  int hash_length = info->panel_count*cPANEL_HASH_LENGTH;
-
-  if (memcmp(leaf->field.field_hash, f->field_hash, hash_length) == 0) {
-    return TRUE;
-  }
-
-  int i = 0;
-  for (i = 0; i < leaf->leaves_count; i++) {
-    int ret = 0;
-    SOLVE_TREE* p = leaf->leaves[i];
-    ret = chk_hash_from_root(p, f);
-    if (ret == TRUE) {
-      return TRUE;
-    }
-  }
-
-  return FALSE;
-}
-*/
 
 int count_leaves_from_depth(SOLVE_TREE* leaf, int depth) {
   int ret = leaf->leaves_count;
@@ -512,7 +427,6 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
       if (!chk_panel_move(&leaf->field, i, j)) {
         continue;
       }
-      //printf("%d:%d\n", i, j);
 
       if ( (leaf->leaves_count+1) >= cSOLVE_LEAVES_MAX) {
         printf("error over leaves\n");
@@ -523,8 +437,6 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
       SOLVE_TREE* new_leaf = leaf->leaves[leaf->leaves_count];
       copy_field(&leaf->field, &new_leaf->field);
       move_panel(&new_leaf->field, i, j);
-      //create_field_hash(&new_leaf->field);
-      //add_field_hash(&g_field_info, &new_leaf->field);
 
       new_leaf->depth = depth + 1;
       new_leaf->leaves_count = 0;
@@ -535,13 +447,6 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
         leaf->leaves[leaf->leaves_count] = NULL;
         continue;
       }
-/*
-      if (chk_hash_from_root(root, &new_leaf->field) == TRUE) {
-        destroy_solve_tree(new_leaf);
-        leaf->leaves[leaf->leaves_count] = NULL;
-        continue;
-      }
-*/
       leaf->leaves_count++;
     }
   }
@@ -563,8 +468,6 @@ int solve_field(FIELD* f) {
   root->leaves_count = 0;
   copy_field(f, &root->field);
   chk_hash_and_append(&g_field_info, &root->field);
-  //add_field_hash(&g_field_info, &root->field);
-  //create_field_hash(&root->field);
 
   int ret = 0;
   int leaves_count = 0;
