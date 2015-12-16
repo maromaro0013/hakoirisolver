@@ -15,6 +15,7 @@
 #define cPANEL_SIZE_PATTERNS (cPANEL_SIZE_LIMIT*cPANEL_SIZE_LIMIT)
 
 #define cPANEL_HASH_LENGTH (2)
+#define cFIELD_HASH_MAX    (0xffff)
 
 #define cSOLVE_LEAVES_MAX (16)
 
@@ -53,12 +54,13 @@ typedef struct FIELD_INFO_t {
 
   int panel_count;
   int target_idx;
+  int field_hash_count;
 }FIELD_INFO;
 
 typedef struct FIELD_t {
   PANEL panels[cPANELS_MAX];
 
-  char* field_hash;
+//  char* field_hash;
 }FIELD;
 
 typedef struct SOLVE_TREE_t {
