@@ -407,6 +407,13 @@ int grow_solve_tree(SOLVE_TREE* root, SOLVE_TREE* leaf, int depth) {
         break;
 
         case eSOLVESTATE_FAILED:
+          // 葉が広がらないなら削除
+          destroy_solve_tree(leaf->leaves[i]);
+          for (j = i; j < cSOLVE_LEAVES_MAX - 1; j++) {
+            leaf->leaves[j] = leaf->leaves[j + 1];
+          }
+          leaf->leaves_count--;
+          i--;
         break;
 
         case eSOLVESTATE_SUCCEED:
