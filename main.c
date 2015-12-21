@@ -96,6 +96,14 @@ void add_panel_to_field(FIELD* field, char x, char y, char w, char h, char type)
 }
 
 int panel_collision(PANEL* p0, PANEL* p1) {
+  if ( (p0->x              < p1->x + p1->width ) &&
+     (p0->x + p0->width  > p1->x             ) &&
+     (p0->y              < p1->y + p1->height) &&
+     (p0->y + p0->height > p1->y             )) {
+  return TRUE;
+}
+return FALSE;
+/*
   int x0 = p0->x;
   int x1 = p0->x + p0->width;
   int x2 = p1->x;
@@ -123,6 +131,7 @@ int panel_collision(PANEL* p0, PANEL* p1) {
     }
   }
   return FALSE;
+*/
 }
 
 // 移動判定のメモ化配列の初期化
